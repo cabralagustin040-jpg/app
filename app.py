@@ -2,6 +2,29 @@ import streamlit as st
 import pandas as pd
 from predictor import calcular_tabla, match_probabilities, top_scorelines, FILE
 
+# 🔐 Login básico
+USUARIOS = {
+    "agustin": "premier2025",
+    "admin": "1234"
+}
+
+if "autenticado" not in st.session_state:
+    st.session_state["autenticado"] = False
+
+if not st.session_state["autenticado"]:
+    st.set_page_config(page_title="Premier Predictor", layout="centered")
+    st.title("🔐 Acceso privado")
+    usuario = st.text_input("Usuario")
+    clave = st.text_input("Contraseña", type="password")
+    if st.button("Ingresar"):
+        if usuario in USUARIOS and USUARIOS[usuario] == clave:
+            st.session_state["autenticado"] = True
+            st.rerun()
+        else:
+            st.error("Usuario o contraseña incorrectos")
+    st.stop()
+
+# ✅ App principal (solo si está autenticado)
 st.set_page_config(page_title="Premier Predictor", layout="wide")
 df = pd.read_csv(FILE, parse_dates=["fecha"])
 
@@ -120,4 +143,5 @@ elif opcion == "Posibles apuestas por jornada":
             st.write(f"⚽ Goles esperados: {row['local']} {lambda_home:.2f} - {lambda_away:.2f} {row['visitante']}")
             st.write(f"📊 Probabilidades: {row['local']} {p_home:.1%}, Empate {p_draw:.1%}, {row['visitante']} {p_away:.1%}")
             st.write(f"👉 Favorito: **{favorito}**")
-            st.write("---")
+            st.write
+
