@@ -1,0 +1,17 @@
+[remap]
+
+importer="csv_translation"
+type="Translation"
+uid="uid://bprqextfux5g2"
+
+[deps]
+
+files=["res://android (2)/premier 2025.fecha.translation", "res://android (2)/premier 2025.jornada.translation", "res://android (2)/premier 2025.estado.translation", "res://android (2)/premier 2025.local.translation", "res://android (2)/premier 2025.visitante.translation", "res://android (2)/premier 2025.goles.translation", "res://android (2)/premier 2025.goles.translation", "res://android (2)/premier 2025.resultado.translation", "res://android (2)/premier 2025.goles.translation", "res://android (2)/premier 2025.diferencia.translation", "res://android (2)/premier 2025.competicion.translation", "res://android (2)/premier 2025.temporada.translation"]
+
+source_file="res://android (2)/premier 2025.csv"
+dest_files=["res://android (2)/premier 2025.fecha.translation", "res://android (2)/premier 2025.jornada.translation", "res://android (2)/premier 2025.estado.translation", "res://android (2)/premier 2025.local.translation", "res://android (2)/premier 2025.visitante.translation", "res://android (2)/premier 2025.goles.translation", "res://android (2)/premier 2025.goles.translation", "res://android (2)/premier 2025.resultado.translation", "res://android (2)/premier 2025.goles.translation", "res://android (2)/premier 2025.diferencia.translation", "res://android (2)/premier 2025.competicion.translation", "res://android (2)/premier 2025.temporada.translation"]
+
+[params]
+
+compress=true
+delimiter=0

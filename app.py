@@ -1,11 +1,15 @@
 import streamlit as st
 import pandas as pd
 from predictor import calcular_tabla, match_probabilities, top_scorelines, FILE
+from utils import escudo_path
+
 
 # 🔐 Usuarios con roles
 USUARIOS = {
     "agustin": {"clave": "premier2025", "rol": "admin"},
-    "invitado": {"clave": "futbol2025", "rol": "public"}
+    "invitado": {"clave": "futbol2025", "rol": "public"},
+     "premier": {"clave": "futbol2025", "rol": "public"},
+     "Premier": {"clave": "futbol2025", "rol": "public"}  
 }
 
 # 🔒 Estado inicial
@@ -48,113 +52,61 @@ opciones_publicas = [
 ]
 
 opciones_admin = [
-    "Ver partidos pendientes",
-    "Ver marcadores más probables de un partido",
-    "Seleccionar jornada para ver y editar",
-    "Editar partido por índice",
-    "Editar todos los partidos de una jornada"
+ "🛠️ Rellenar encuentros (admin)"
 ]
 
 menu = opciones_publicas + opciones_admin if st.session_state["rol"] == "admin" else opciones_publicas
 opcion = st.sidebar.selectbox("Selecciona una opción", menu)
 
-
-# 📊 Tabla de posiciones
 if opcion == "Ver tabla de posiciones":
     st.subheader("📊 Tabla de posiciones")
-    tabla = calcular_tabla(df)
-    st.dataframe(tabla[["PJ","PG","PE","PP","GF","GC","DG","Pts"]])
+    tabla = calcular_tabla(df).copy()
+
+    for club, fila in tabla.iterrows():
+        col1, col2 = st.columns([1, 5])
+        ruta = escudo_path(club)
+        col1.image(ruta, width=60)
+        col2.markdown(
+            f"""
+            <div style='line-height: 1.6'>
+            <b>{club}</b><br>
+            Pts: {fila['Pts']} | PJ: {fila['PJ']} | PG: {fila['PG']} | PE: {fila['PE']} | PP: {fila['PP']}<br>
+            GF: {fila['GF']} | GC: {fila['GC']} | DG: {fila['DG']}
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
     st.divider()
 
-# 📅 Partidos pendientes
-elif opcion == "Ver partidos pendientes":
-    st.subheader("📅 Partidos pendientes")
-    pendientes = df[df["goles_local"].isna() | df["goles_visitante"].isna()]
-    if pendientes.empty:
-        st.success("No hay partidos pendientes.")
-    else:
-        st.dataframe(pendientes[["jornada","fecha","local","visitante"]])
+elif opcion == "🛠️ Rellenar encuentros (admin)":
+    st.subheader("🛠️ Rellenar encuentros")
+
+    jornadas = sorted(df["jornada"].unique())
+    jornada_seleccionada = st.selectbox("Seleccioná la jornada", jornadas)
+
+    partidos_jornada = df[df["jornada"] == jornada_seleccionada]
+
+    for idx, partido in partidos_jornada.iterrows():
+        st.markdown(f"**{partido['local']} vs {partido['visitante']}**")
+
+        col1, col2 = st.columns(2)
+
+        # Manejo seguro de NaN
+        valor_local = int(partido["goles_local"]) if pd.notna(partido["goles_local"]) else 0
+        valor_visitante = int(partido["goles_visitante"]) if pd.notna(partido["goles_visitante"]) else 0
+
+        valor_local = int(partido["goles_local"]) if pd.notna(partido["goles_local"]) else 0
+        gol_local = col1.number_input(f"Goles {partido['local']}", min_value=0, value=valor_local, key=f"local_{idx}")
+
+        gol_visitante = col2.number_input(f"Goles {partido['visitante']}", min_value=0, value=valor_visitante, key=f"visitante_{idx}")
+
+        if st.button("Guardar", key=f"guardar_{idx}"):
+            df.at[idx, "goles_local"] = gol_local
+            df.at[idx, "goles_visitante"] = gol_visitante
+            st.success("✅ Partido actualizado")
+
     st.divider()
 
-# ✏️ Editar partido por índice (solo admin)
-elif opcion == "Editar partido por índice":
-    if st.session_state["rol"] != "admin":
-        st.warning("⚠️ Esta función solo está disponible para administradores.")
-        st.stop()
-    st.subheader("✏️ Editar partido por índice")
-    idx = st.number_input("Índice del partido", min_value=0, max_value=len(df)-1, step=1)
-    row = df.loc[idx]
-    st.write(f"Editando: Jornada {row['jornada']} {row['local']} vs {row['visitante']}")
-    gl = st.number_input("Goles local", min_value=0, step=1)
-    gv = st.number_input("Goles visitante", min_value=0, step=1)
-    if st.button("Guardar cambios"):
-        df.at[idx,"goles_local"] = gl
-        df.at[idx,"goles_visitante"] = gv
-        df.to_csv(FILE, index=False)
-        st.success("✅ Partido actualizado.")
-    st.divider()
-
-# 🗓️ Editar jornada completa (solo admin)
-elif opcion == "Editar todos los partidos de una jornada":
-    if st.session_state["rol"] != "admin":
-        st.warning("⚠️ Esta función solo está disponible para administradores.")
-        st.stop()
-    st.subheader("🗓️ Editar jornada completa")
-    jsel = st.number_input("Número de jornada", min_value=1, step=1)
-    jornada = df[df["jornada"] == jsel]
-    if jornada.empty:
-        st.warning("No existe esa jornada.")
-    else:
-        for idx, row in jornada.iterrows():
-            if pd.isna(row["goles_local"]) or pd.isna(row["goles_visitante"]):
-                st.write(f"{row['local']} vs {row['visitante']}")
-                gl = st.number_input(f"Goles {row['local']} (idx {idx})", min_value=0, step=1, key=f"gl{idx}")
-                gv = st.number_input(f"Goles {row['visitante']} (idx {idx})", min_value=0, step=1, key=f"gv{idx}")
-                if st.button(f"Guardar partido {idx}"):
-                    df.at[idx,"goles_local"] = gl
-                    df.at[idx,"goles_visitante"] = gv
-                    df.to_csv(FILE, index=False)
-                    st.success(f"✅ Partido {idx} actualizado.")
-    st.divider()
-
-# 🔮 Predicción de marcador
-elif opcion == "Ver marcadores más probables de un partido":
-    st.subheader("🔮 Predicción de marcador")
-    idx = st.number_input("Índice del partido", min_value=0, max_value=len(df)-1, step=1)
-    row = df.loc[idx]
-    st.write(f"Partido: {row['local']} vs {row['visitante']}")
-
-    df_hist = df[(df["fecha"] < row["fecha"]) & df["goles_local"].notna() & df["goles_visitante"].notna()]
-    gf_home = df_hist[df_hist["local"] == row["local"]]["goles_local"].mean() or 1.0
-    gc_home = df_hist[df_hist["local"] == row["local"]]["goles_visitante"].mean() or 1.0
-    gf_away = df_hist[df_hist["visitante"] == row["visitante"]]["goles_visitante"].mean() or 1.0
-    gc_away = df_hist[df_hist["visitante"] == row["visitante"]]["goles_local"].mean() or 1.0
-
-    lambda_home = (gf_home + gc_away) / 2
-    lambda_away = (gf_away + gc_home) / 2
-    p_home, p_draw, p_away = match_probabilities(lambda_home, lambda_away)
-
-    favorito = row['local'] if p_home > max(p_draw, p_away) else row['visitante'] if p_away > max(p_home, p_draw) else "Empate"
-    st.write(f"⚽ Goles esperados: {row['local']} {lambda_home:.2f} - {lambda_away:.2f} {row['visitante']}")
-    st.write(f"📊 Probabilidades: {row['local']} {p_home:.1%}, Empate {p_draw:.1%}, {row['visitante']} {p_away:.1%}")
-    st.write(f"👉 Favorito: **{favorito}**")
-
-    st.write("🎯 Marcadores más probables:")
-    top5 = top_scorelines(lambda_home, lambda_away)
-    for (gh, ga), p in top5:
-        st.write(f"- {row['local']} {gh}-{ga} {row['visitante']} → {p:.1%}")
-    st.divider()
-
-# 🧮 Ver y editar jornada
-elif opcion == "Seleccionar jornada para ver y editar":
-    st.subheader("🧮 Ver y editar jornada")
-    jsel = st.number_input("Selecciona jornada", min_value=1, step=1)
-    jornada = df[df["jornada"] == jsel]
-    if jornada.empty:
-        st.warning("No existe esa jornada.")
-    else:
-        st.dataframe(jornada[["local","visitante","goles_local","goles_visitante"]])
-    st.divider()
 
 elif opcion == "Predicción de la próxima jornada":
     st.subheader("📅 Predicción de la próxima jornada pendiente")
@@ -211,4 +163,5 @@ elif opcion == "Predicción de la próxima jornada":
                 for (gh, ga), p in top5:
                     st.write(f"- {local} {gh}-{ga} {visitante} → {p:.1%}")
                 st.divider()
+
 
